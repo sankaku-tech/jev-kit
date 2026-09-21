@@ -559,6 +559,15 @@ button,input,select,textarea{font:inherit;color:inherit}
           <p class="caption" style="margin-top:var(--sp-sm);text-align:center" id="noteEnvWin">ウィンドウを閉じると消えます</p>
         </div>
       </div>
+      <div class="panel panel-wide stack-sm">
+        <h3 class="card-title">実行しても、何も表示されません。それが正常です</h3>
+        <p class="body-sm muted">入ったかどうかは、次の1行で確かめます。<strong>キーの中身は表示されません。</strong>「キーは設定されています」と出れば成功。何も出なければ、<span class="mono">=</span> のあとにキーが入っていません。</p>
+        <div class="lp-two">
+          <pre class="lp-pre lp-pre-open" style="margin-bottom:0">echo ${AI_GATEWAY_API_KEY:+キーは設定されています}</pre>
+          <pre class="lp-pre lp-pre-open" style="margin-bottom:0">if ($env:AI_GATEWAY_API_KEY) { &quot;キーは設定されています&quot; }</pre>
+        </div>
+        <p class="body-sm muted">効くのは<strong>その1行を実行したターミナルの窓だけ</strong>です。別の窓や、アプリ版の Claude Code には届きません。アプリ版で使うなら <span class="mono">~/.zshrc</span> に同じ1行を足して、アプリを開き直してください。</p>
+      </div>
     </div>
   </section>
 
