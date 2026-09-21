@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jev 導入マニュアル — しゃべらないAIを、自分の道具に入れる</title>
+<meta name="description" content="判定だけを返すAI『Jev』を、Claude Code と Codex から使えるようにするまでの手順。キーの発行から最初の1件を通すまで。">
+<meta property="og:title" content="Jev 導入マニュアル">
+<meta property="og:description" content="しゃべらないAIを、自分の道具に入れる。Claude Code・Codex 両対応。">
+<meta property="og:type" content="website">
+
+<!-- このファイルは _build_index.py が生成する。直接編集しないこと -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================================
+   1. TOKENS — 色・余白・字送りの定義。ここは編集しない
+   ========================================================================== */
+:root{
+  --canvas:#010102;
+  --s1:#0f1011;
+  --s2:#141516;
+  --s3:#18191a;
+  --s4:#191a1b;
+
+  --hair:#23252a;
+  --hair-strong:#34343a;
+  --hair-3:#3e3e44;
+
+  --ink:#f7f8f8;
+  --ink-muted:#d0d6e0;
+  --ink-subtle:#8a8f98;
+  --ink-3:#62666d;
+
+  --accent:#5e6ad2;
+  --accent-hover:#828fff;
+  --accent-focus:#5e69d1;
+  --success:#27a644;
+
+  --r-xs:4px; --r-sm:6px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-xxl:24px;
+  --r-pill:9999px;
+
+  --sp-xxs:4px; --sp-xs:8px; --sp-sm:12px; --sp-md:16px;
+  --sp-lg:24px; --sp-xl:32px; --sp-xxl:48px; --sp-sec:96px;
+
+  --font:'Inter','Noto Sans JP',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+
+  --tr-xl:-0.030em; --tr-lg:-0.028em; --tr-md:-0.022em;
+  --tr-head:-0.020em; --tr-card:-0.018em; --tr-sub:-0.010em;
+  --tr-body:-0.003em; --tr-eyebrow:0.03em;
+
+  --maxw:1280px;
+
+  --panel-hi:rgba(255,255,255,.04);
+  --on-accent:#fff;
+  --inverse-bg:#fff; --inverse-fg:#000; --inverse-bg-hover:#f5f6f6;
+}
+
+/* ==========================================================================
+   1b. LIGHT
+   ========================================================================== */
+:root[data-theme="light"]{
+  --canvas:#ffffff; --s1:#f8f9fa; --s2:#f1f2f4; --s3:#ebecef; --s4:#e8e9ec;
+  --hair:#e4e6e9; --hair-strong:#d0d3d8; --hair-3:#b6bac1;
+  --ink:#101113; --ink-muted:#3f434a; --ink-subtle:#6b7078; --ink-3:#9096a0;
+  --accent:#5e6ad2; --accent-hover:#4b57c4; --accent-focus:#5e69d1; --success:#1a8a37;
+  --panel-hi:rgba(255,255,255,0);
+  --on-accent:#fff;
+  --inverse-bg:#101113; --inverse-fg:#ffffff; --inverse-bg-hover:#2a2d33;
+}
+
+/* ==========================================================================
+   2. RESET & BASE
+   ========================================================================== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--canvas);
+  color:var(--ink);
+  font-family:var(--font);
+  font-size:16px; line-height:1.5; letter-spacing:var(--tr-body);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+img,svg{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+
+:focus-visible{
+  outline:2px solid color-mix(in srgb,var(--accent-focus) 50%,transparent);
+  outline-offset:2px;
+  border-radius:var(--r-xs);
+}
+
+/* ==========================================================================
+   3. TYPOGRAPHY
+   ========================================================================== */
+.display-xl{font-size:clamp(2.25rem,5.5vw + .6rem,5rem);   font-weight:600;line-height:1.05;letter-spacing:var(--tr-xl)}
+.display-lg{font-size:clamp(1.875rem,3.6vw + .6rem,3.5rem);font-weight:600;line-height:1.10;letter-spacing:var(--tr-lg)}
+.display-md{font-size:clamp(1.5rem,2.2vw + .7rem,2.5rem);  font-weight:600;line-height:1.15;letter-spacing:var(--tr-md)}
+.headline  {font-size:clamp(1.375rem,1.4vw + .9rem,1.75rem);font-weight:600;line-height:1.20;letter-spacing:var(--tr-head)}
+.card-title{font-size:1.375rem;font-weight:500;line-height:1.25;letter-spacing:var(--tr-card)}
+.subhead   {font-size:1.25rem; font-weight:400;line-height:1.40;letter-spacing:var(--tr-sub);color:var(--ink-muted)}
+.body-lg   {font-size:1.125rem;font-weight:400;line-height:1.50}
+.body      {font-size:1rem;    font-weight:400;line-height:1.50}
+.body-sm   {font-size:.875rem; font-weight:400;line-height:1.50}
+.caption   {font-size:.75rem;  font-weight:400;line-height:1.40;color:var(--ink-subtle)}
+.mono      {font-family:var(--font-mono);font-size:.8125rem;line-height:1.5}
+
+.eyebrow{
+  font-size:.8125rem;font-weight:500;line-height:1.3;
+  letter-spacing:var(--tr-eyebrow);
+  color:var(--accent);
+  text-transform:uppercase;
+}
+.muted{color:var(--ink-subtle)}
+.dim{color:var(--ink-3)}
+
+/* ==========================================================================
+   4. LAYOUT
+   ========================================================================== */
+.container{max-width:var(--maxw);margin-inline:auto;padding-inline:var(--sp-lg)}
+.section{padding-block:var(--sp-sec);scroll-margin-top:72px}
+.stack-xs > * + *{margin-top:var(--sp-xs)}
+.stack-sm > * + *{margin-top:var(--sp-sm)}
+.stack   > * + *{margin-top:var(--sp-md)}
+.stack-lg> * + *{margin-top:var(--sp-lg)}
+.stack-xl> * + *{margin-top:var(--sp-xl)}
+.row{display:flex;align-items:center;gap:var(--sp-sm);flex-wrap:wrap}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-md);flex-wrap:wrap}
+
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-md)}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-md)}
+
+/* ==========================================================================
+   5. COMPONENTS
+   ========================================================================== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-xs);
+  min-height:40px;padding:var(--sp-xs) 14px;
+  font-size:.875rem;font-weight:500;line-height:1.2;letter-spacing:0;
+  border:1px solid transparent;border-radius:var(--r-md);
+  cursor:pointer;transition:background-color .15s ease,border-color .15s ease,color .15s ease;
+  white-space:nowrap;
+}
+.btn-primary  {background:var(--accent);color:var(--on-accent)}
+.btn-primary:hover {background:var(--accent-hover)}
+.btn-primary:active{background:var(--accent-focus)}
+.btn-secondary{background:var(--s1);color:var(--ink);border-color:var(--hair)}
+.btn-secondary:hover{background:var(--s2);border-color:var(--hair-strong)}
+.btn-tertiary {background:transparent;color:var(--ink-muted)}
+.btn-tertiary:hover{background:var(--s1);color:var(--ink)}
+.btn-inverse  {background:var(--inverse-bg);color:var(--inverse-fg)}
+.btn-inverse:hover{background:var(--inverse-bg-hover)}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.btn-sm{min-height:32px;padding:6px 10px;font-size:.8125rem}
+
+.panel{
+  background:var(--s1);
+  border:1px solid var(--hair);
+  border-radius:var(--r-lg);
+  padding:var(--sp-lg);
+  box-shadow:inset 0 1px 0 var(--panel-hi);
+}
+.panel-lift{background:var(--s2);border-color:var(--hair-strong)}
+.panel-wide{border-radius:var(--r-xl)}
+.panel-cta {padding:var(--sp-xxl)}
+.panel-quote{padding:var(--sp-xl);font-size:1.125rem;line-height:1.5}
+.panel-hover{transition:background-color .15s ease,border-color .15s ease}
+.panel-hover:hover{background:var(--s2);border-color:var(--hair-strong)}
+
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--s2);color:var(--ink-muted);
+  font-size:.75rem;line-height:1.4;
+  padding:2px 8px;border-radius:var(--r-pill);border:1px solid var(--hair);
+}
+.badge-success{color:var(--ink)}
+.badge-success::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--success)}
+
+.tabs{display:inline-flex;gap:var(--sp-xxs);background:var(--canvas);
+      border:1px solid var(--hair);border-radius:var(--r-pill);padding:var(--sp-xxs)}
+.tab{
+  min-height:36px;padding:6px 14px;border:0;border-radius:var(--r-pill);
+  background:transparent;color:var(--ink-subtle);
+  font-size:.875rem;font-weight:500;cursor:pointer;transition:.15s ease;
+}
+.tab[aria-selected="true"]{background:var(--s2);color:var(--ink)}
+
+.theme-switch{display:inline-flex;gap:2px;background:var(--canvas);
+  border:1px solid var(--hair);border-radius:var(--r-pill);padding:2px}
+.theme-opt{width:30px;height:30px;border:0;border-radius:var(--r-pill);
+  background:transparent;color:var(--ink-3);cursor:pointer;
+  display:grid;place-items:center;transition:background-color .15s ease,color .15s ease}
+.theme-opt:hover{color:var(--ink-muted)}
+:root[data-theme-pref="system"] .theme-opt[data-theme-set="system"],
+:root[data-theme-pref="light"]  .theme-opt[data-theme-set="light"],
+:root[data-theme-pref="dark"]   .theme-opt[data-theme-set="dark"]{background:var(--s2);color:var(--ink)}
+
+.table-wrap{border:1px solid var(--hair);border-radius:var(--r-lg);overflow:hidden}
+.table{width:100%;border-collapse:collapse;font-size:.875rem}
+.table th{
+  background:var(--s1);color:var(--ink-subtle);
+  font-weight:500;text-align:left;
+  padding:var(--sp-sm) var(--sp-md);
+  border-bottom:1px solid var(--hair);white-space:nowrap;
+}
+.table td{padding:var(--sp-sm) var(--sp-md);border-bottom:1px solid var(--hair)}
+.table tbody tr:last-child td{border-bottom:0}
+.table tbody tr:hover{background:var(--s1)}
+.table .num{text-align:right;font-variant-numeric:tabular-nums}
+
+.row-item{padding:var(--sp-lg) 0;border-bottom:1px solid var(--hair)}
+.row-item:last-child{border-bottom:0}
+
+.nav{
+  position:sticky;top:0;z-index:50;
+  height:56px;background:color-mix(in srgb,var(--canvas) 82%,transparent);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--hair);
+}
+.nav-inner{max-width:var(--maxw);margin-inline:auto;height:100%;
+           padding-inline:var(--sp-lg);display:flex;align-items:center;gap:var(--sp-lg)}
+.brand{display:flex;align-items:center;gap:var(--sp-xs);font-weight:600;letter-spacing:var(--tr-card)}
+.brand-mark{width:20px;height:20px;border-radius:var(--r-sm);background:var(--accent);flex:none}
+.nav-links{display:flex;gap:var(--sp-lg);margin-left:var(--sp-md)}
+.nav-links a{font-size:.875rem;color:var(--ink-subtle);transition:color .15s ease}
+.nav-links a:hover{color:var(--ink)}
+.nav-actions{margin-left:auto;display:flex;gap:var(--sp-xs)}
+.nav-toggle{display:none;background:transparent;border:1px solid var(--hair);
+            border-radius:var(--r-md);width:36px;height:36px;cursor:pointer}
+
+.footer{border-top:1px solid var(--hair);padding:64px var(--sp-xl);color:var(--ink-subtle);font-size:.75rem}
+.footer-grid{max-width:var(--maxw);margin-inline:auto;display:grid;
+             grid-template-columns:1.5fr repeat(3,1fr);gap:var(--sp-xl)}
+.footer a{display:block;padding:5px 0;color:var(--ink-subtle);transition:color .15s ease}
+.footer a:hover{color:var(--ink)}
+.footer h4{font-size:.75rem;font-weight:500;color:var(--ink);margin-bottom:var(--sp-xs)}
+
+.mock{background:var(--canvas);border:1px solid var(--hair);border-radius:var(--r-md);overflow:hidden}
+.mock-bar{display:flex;align-items:center;gap:6px;padding:10px var(--sp-sm);border-bottom:1px solid var(--hair)}
+.mock-dot{width:9px;height:9px;border-radius:50%;background:var(--hair-3)}
+.mock-row{display:flex;align-items:center;gap:var(--sp-sm);
+          padding:10px var(--sp-md);border-bottom:1px solid var(--hair);font-size:.8125rem}
+.mock-row:last-child{border-bottom:0}
+.mock-id{font-family:var(--font-mono);font-size:.75rem;color:var(--ink-3);width:64px;flex:none}
+.mock-tag{margin-left:auto;flex:none}
+
+/* ==========================================================================
+   6. RESPONSIVE
+   ========================================================================== */
+@media (max-width:1024px){
+  .grid-3{grid-template-columns:repeat(2,1fr)}
+  .footer-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:768px){
+  :root{--sp-sec:64px}
+  .grid-3,.grid-2{grid-template-columns:1fr}
+  .nav-links{display:none;position:absolute;top:56px;left:0;right:0;
+             flex-direction:column;gap:0;background:var(--s1);
+             border-bottom:1px solid var(--hair);padding:var(--sp-sm) var(--sp-lg);margin:0}
+  .nav-links.open{display:flex}
+  .nav-links a{padding:var(--sp-sm) 0}
+  .nav-toggle{display:block}
+  .theme-opt{width:26px;height:26px}
+  .brand{font-size:.9375rem}
+  .nav-hide-sm{display:none !important}
+  .panel-cta{padding:var(--sp-xl)}
+  .footer-grid{grid-template-columns:1fr}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms !important;animation-duration:.01ms !important}
+}
+
+/* ==========================================================================
+   7. PARTS — 資料ページでよく使う部品。トークンだけで組む
+   ========================================================================== */
+
+/* --- 確度バッジ ---------------------------------------------------------
+   「裏が取れた／自己申告／未確認」を見た目で分ける。有彩色は1色ルールなので、
+   差は色ではなく「ドットの形」で出す。
+   確定 = 塗りつぶし .badge-success ／ 自己申告 = 中空 .badge-own ／
+   未確認 = 破線 .badge-check */
+.badge-own::before{content:"";width:6px;height:6px;border-radius:50%;
+  border:1px solid var(--hair-3);background:transparent}
+.badge-check{color:var(--ink-subtle);border-style:dashed;border-color:var(--hair-strong)}
+.badge-check::before{content:"";width:6px;height:6px;border-radius:50%;
+  border:1px dashed var(--ink-3);background:transparent}
+
+/* --- ナビのブランド名 ---------------------------------------------------
+   和文が長いと狭い画面で折り返し、56px のナビからはみ出す。折り返さず、
+   代わりに優先度の低いナビ要素へ .nav-hide-sm を付けて逃がす。 */
+.brand{white-space:nowrap}
+
+/* --- 本文 ---------------------------------------------------------------
+   本文幅は 68ch で止める。全幅に伸ばすと1行が長すぎて読めなくなる */
+.prose{max-width:68ch}
+.prose p + p{margin-top:var(--sp-md)}
+.prose strong{font-weight:600;color:var(--ink)}
+
+/* --- 章番号・小見出しラベル --------------------------------------------- */
+.act-no{font-family:var(--font-mono);font-size:.75rem;color:var(--ink-3);
+  letter-spacing:var(--tr-eyebrow)}
+
+/* --- 縦タイムライン -----------------------------------------------------
+   年を左固定幅・出来事を右に流す。1本の hairline を疑似要素で通す */
+.tl{position:relative;padding-left:var(--sp-lg)}
+.tl::before{content:"";position:absolute;left:0;top:6px;bottom:6px;
+  width:1px;background:var(--hair)}
+.tl-item{position:relative;padding-block:var(--sp-sm)}
+.tl-item::before{content:"";position:absolute;left:calc(var(--sp-lg) * -1);top:calc(var(--sp-sm) + 8px);
+  width:7px;height:7px;border-radius:50%;background:var(--hair-3);
+  transform:translateX(-3px)}
+.tl-item.is-key::before{background:var(--accent)}
+.tl-year{font-family:var(--font-mono);font-size:.8125rem;color:var(--ink-subtle)}
+.tl-item.is-key .tl-year{color:var(--accent)}
+
+/* --- 段組（3つの手順・段階を横に並べる）--------------------------------- */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-sm)}
+.step{background:var(--s2);border:1px solid var(--hair);border-radius:var(--r-md);
+  padding:var(--sp-md)}
+.step-no{font-family:var(--font-mono);font-size:.75rem;color:var(--ink-3)}
+@media (max-width:768px){ .steps{grid-template-columns:1fr} }
+
+/* --- 対比パネル（左右2枚で比べる）--------------------------------------- */
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-md)}
+@media (max-width:768px){ .vs{grid-template-columns:1fr} }
+.ul-tight{list-style:none;padding:0}
+.ul-tight li{position:relative;padding-left:var(--sp-md);margin-top:var(--sp-xs);
+  font-size:.9375rem;line-height:1.55;color:var(--ink-muted)}
+.ul-tight li::before{content:"";position:absolute;left:2px;top:.65em;
+  width:5px;height:1px;background:var(--hair-3)}
+
+/* --- 目次 ---------------------------------------------------------------
+   長い資料でだけ使う。短いページに置くと、かえって読み始めが遅くなる */
+.toc{list-style:none;padding:0;columns:2;column-gap:var(--sp-xl)}
+.toc li{break-inside:avoid}
+.toc a{display:flex;gap:var(--sp-sm);padding:8px 0;border-bottom:1px solid var(--hair);
+  font-size:.9375rem;color:var(--ink-muted);transition:color .15s ease}
+.toc a:hover{color:var(--ink)}
+.toc .n{font-family:var(--font-mono);font-size:.75rem;color:var(--ink-3);flex:none;width:22px}
+@media (max-width:768px){ .toc{columns:1} }
+
+/* --- 出典リスト --------------------------------------------------------- */
+.src{list-style:none;padding:0;columns:2;column-gap:var(--sp-xl)}
+.src li{break-inside:avoid;padding-block:6px;font-size:.8125rem;color:var(--ink-subtle)}
+.src a{color:var(--ink-muted);border-bottom:1px solid var(--hair)}
+.src a:hover{color:var(--accent-hover);border-bottom-color:var(--accent)}
+@media (max-width:768px){ .src{columns:1} }
+
+/* --- 表: 長文セルは折り返す。横長の表は入れ物の中だけでスクロール -------- */
+.table td.wrap{white-space:normal;min-width:220px}
+.table th.yr,.table td.yr{white-space:nowrap;font-family:var(--font-mono);font-size:.8125rem;
+  color:var(--ink-subtle);vertical-align:top}
+.table-scroll{overflow-x:auto}
+</style>
+
+<script>
+/* ==========================================================================
+   テーマ確定 — CSSより後・body描画より前に必ず走らせる
+   ========================================================================== */
+(function () {
+  var THEME_KEY = 'jev-lp-theme';
+  function readPref() {
+    try { var v = localStorage.getItem(THEME_KEY);
+      if (v === 'light' || v === 'dark' || v === 'system') return v; } catch (e) {}
+    return 'system';
+  }
+  function resolve(pref) {
+    if (pref === 'light' || pref === 'dark') return pref;
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+  }
+  function apply(pref) {
+    var r = document.documentElement;
+    r.setAttribute('data-theme-pref', pref);
+    r.setAttribute('data-theme', resolve(pref));
+  }
+  apply(readPref());
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('[data-theme-set]') : null;
+      if (!b) return;
+      var pref = b.getAttribute('data-theme-set');
+      try { localStorage.setItem(THEME_KEY, pref); } catch (err) {}
+      apply(pref);
+    });
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: light)');
+    var follow = function () { if (readPref() === 'system') apply('system'); };
+    if (mq.addEventListener) mq.addEventListener('change', follow); else mq.addListener(follow);
+  }
+})();
+</script>
+
+<style>
+/* ==========================================================================
+   配布ページ専用の層。器のトークンだけを使い、色は直接書かない
+   ========================================================================== */
+.lp-hero{padding-block:calc(var(--sp-sec) * .8) var(--sp-xl)}
+.lp-gift{
+  display:inline-flex;align-items:center;gap:var(--sp-xs);
+  font-size:.8125rem;color:var(--accent);
+  border:1px solid var(--hair-strong);border-radius:var(--r-pill);
+  padding:6px 14px;
+}
+
+/* --- コピーの箱 -------------------------------------------------------- */
+.lp-copy{background:var(--s2);border:1px solid var(--hair-strong);
+  border-radius:var(--r-xl);padding:var(--sp-lg);
+  box-shadow:inset 0 1px 0 var(--panel-hi)}
+.lp-copy-sub{background:transparent;border-color:var(--hair);box-shadow:none}
+.lp-btn-copy{
+  width:100%;min-height:56px;font-size:1rem;font-weight:600;
+  border-radius:var(--r-md);border:1px solid transparent;
+  background:var(--accent);color:var(--on-accent);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-xs);
+  transition:background-color .15s ease;
+}
+.lp-btn-copy:hover{background:var(--accent-hover)}
+/* コピー後は色を変えず、面と文字だけで「済んだ」を伝える */
+.lp-btn-copy.is-done{background:var(--s4);color:var(--ink);border-color:var(--hair-strong)}
+.lp-btn-copy.is-sub{background:var(--s3);color:var(--ink);border-color:var(--hair-strong);
+  min-height:48px;font-size:.9375rem}
+.lp-btn-copy.is-sub:hover{background:var(--s4)}
+
+.lp-pre{
+  margin-top:var(--sp-md);max-height:260px;overflow:auto;
+  background:var(--canvas);border:1px solid var(--hair);border-radius:var(--r-md);
+  padding:var(--sp-md);
+  font-family:var(--font-mono);font-size:.75rem;line-height:1.7;
+  color:var(--ink-muted);white-space:pre-wrap;word-break:break-word;
+}
+/* コマンドは短いので畳まない。見えていること自体が説明になる */
+.lp-pre-open{max-height:none;margin-top:0;margin-bottom:var(--sp-md)}
+.lp-toggle{background:none;border:0;color:var(--ink-subtle);cursor:pointer;
+  font-size:.8125rem;padding:var(--sp-xs) 0}
+.lp-toggle:hover{color:var(--ink)}
+
+.lp-num{font-family:var(--font-mono);font-size:.75rem;color:var(--accent)}
+.lp-two{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-lg)}
+.lp-foot{border-top:1px solid var(--hair);padding-block:var(--sp-xl) var(--sp-sec)}
+@media (max-width:768px){
+  .lp-hero{padding-block:var(--sp-xl)}
+  .lp-two{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#"><span class="brand-mark"></span>Jev 導入マニュアル</a>
+    <div class="nav-actions">
+      <div class="theme-switch" role="group" aria-label="表示テーマ">
+        <button class="theme-opt" data-theme-set="system" title="システムに合わせる" aria-label="システムに合わせる">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </button>
+        <button class="theme-opt" data-theme-set="light" title="ライト" aria-label="ライト">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <button class="theme-opt" data-theme-set="dark" title="ダーク" aria-label="ダーク">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<header class="container lp-hero">
+  <div class="stack-lg" style="max-width:760px">
+    <span class="lp-gift">Claude Code・Codex 両対応</span>
+    <h1 class="display-lg">しゃべらないAIを、<br>自分の道具に入れる。</h1>
+    <p class="subhead">Jev（ジェブ）は、文章を書かずに「どれか選ぶ・点数・はい／いいえ」だけを返すAIです。<br>キーの発行から、最初の1件を通すところまで。上から順にやれば終わります。</p>
+  </div>
+</header>
+
+<main class="container">
+
+  <section class="section" style="padding-top:0">
+    <div class="stack-xl">
+      <div class="stack-sm" style="max-width:760px">
+        <h2 class="display-md">始める前に</h2>
+        <p class="body muted">必要なものは2つです。<strong>Claude Code か Codex のどちらか</strong>がすでに入っていること。それと <strong>Vercel のアカウント</strong>（無料で作れます）。</p>
+      </div>
+      <div class="grid-3">
+        <article class="panel panel-lift stack-sm">
+          <h3 class="card-title">向いている仕事</h3>
+          <p class="body-sm muted">問い合わせの仕分け、クレームの検知、レビューの緊急度づけ。<strong>人が毎回、目で見て決めていた判断</strong>です。</p>
+        </article>
+        <article class="panel stack-sm">
+          <h3 class="card-title">向いていない仕事</h3>
+          <p class="body-sm muted">文章を書くこと、理由を説明すること。Jev は<strong>一文字も書けません</strong>。考える仕事は今までのAIに任せます。</p>
+        </article>
+        <article class="panel stack-sm">
+          <h3 class="card-title">使い分け</h3>
+          <p class="body-sm muted">考えるのは Claude や ChatGPT、さばくのは Jev。全部を賢いAIにやらせると、遅くて高くつきます。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="stack-xl">
+      <div class="stack-sm" style="max-width:760px">
+        <p class="lp-num">STEP 01</p>
+        <h2 class="display-md">Vercel でキーを発行する</h2>
+        <p class="body muted">公式サイトからの利用は順番待ちですが、Vercel の AI Gateway 経由なら待たずに使えます。</p>
+      </div>
+      <div class="grid-3">
+        <article class="panel stack-sm">
+          <p class="lp-num">1-1</p>
+          <h3 class="card-title">API Keys を開く</h3>
+          <p class="body-sm muted">Vercel のダッシュボードで <span class="mono">AI Gateway → API Keys</span> を開きます。</p>
+        </article>
+        <article class="panel stack-sm">
+          <p class="lp-num">1-2</p>
+          <h3 class="card-title">Create key を押す</h3>
+          <p class="body-sm muted">名前は何でも大丈夫です。あとで見分けがつくように <span class="mono">jev-test</span> などにしておきます。</p>
+        </article>
+        <article class="panel stack-sm">
+          <p class="lp-num">1-3</p>
+          <h3 class="card-title">キーをコピーする</h3>
+          <p class="body-sm muted">この画面を閉じると<strong>二度と見られません</strong>。次のステップが終わるまで閉じないでください。</p>
+        </article>
+      </div>
+      <div class="row">
+        <a class="btn btn-secondary" href="https://vercel.com/ai-gateway/models/jev">Vercel の Jev のページを見る</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="stack-xl">
+      <div class="stack-sm" style="max-width:760px">
+        <p class="lp-num">STEP 02</p>
+        <h2 class="display-md">キーを環境変数に入れる</h2>
+        <p class="body muted"><strong>キーをAIのチャットに貼らないでください。</strong>ターミナルで下の1行を実行してから、<strong>その同じターミナルで</strong> Claude Code か Codex を起動します。</p>
+      </div>
+      <div class="lp-two">
+        <div class="lp-copy lp-copy-sub">
+          <p class="body-sm" style="margin-bottom:var(--sp-sm)"><strong>Mac / Linux</strong></p>
+          <pre class="lp-pre lp-pre-open" id="envBox">export AI_GATEWAY_API_KEY=&quot;ここにキーを貼る&quot;</pre>
+          <button class="lp-btn-copy is-sub" type="button" data-copy="envBox" data-note-id="noteEnv"
+                  data-label="この1行をコピーする" data-note="「ここにキーを貼る」を、自分のキーに置き換えて実行してください">この1行をコピーする</button>
+          <p class="caption" style="margin-top:var(--sp-sm);text-align:center" id="noteEnv">毎回使うなら、同じ1行を <span class="mono">~/.zshrc</span> に足します</p>
+        </div>
+        <div class="lp-copy lp-copy-sub">
+          <p class="body-sm" style="margin-bottom:var(--sp-sm)"><strong>Windows（PowerShell）</strong></p>
+          <pre class="lp-pre lp-pre-open" id="envWinBox">$env:AI_GATEWAY_API_KEY=&quot;ここにキーを貼る&quot;</pre>
+          <button class="lp-btn-copy is-sub" type="button" data-copy="envWinBox" data-note-id="noteEnvWin"
+                  data-label="この1行をコピーする" data-note="「ここにキーを貼る」を、自分のキーに置き換えて実行してください">この1行をコピーする</button>
+          <p class="caption" style="margin-top:var(--sp-sm);text-align:center" id="noteEnvWin">ウィンドウを閉じると消えます</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="stack-xl">
+      <div class="stack-sm" style="max-width:760px">
+        <p class="lp-num">STEP 03</p>
+        <h2 class="display-md">公式スキルを入れる</h2>
+        <p class="body muted">使っているほうだけで大丈夫です。入るのは、Jev の使い方を書いた<strong>公式の説明書が1本</strong>。AIがそれを読んで、判定の部分のコードを書けるようになります。</p>
+      </div>
+      <div class="lp-two">
+        <div class="lp-copy">
+          <p class="body-sm" style="margin-bottom:var(--sp-sm)"><strong>A. Claude Code の人</strong></p>
+          <pre class="lp-pre lp-pre-open" id="claudeBox">claude plugin marketplace add typesafe-ai/skills
+claude plugin install typesafe@typesafe-ai</pre>
+          <button class="lp-btn-copy" type="button" data-copy="claudeBox" data-note-id="noteClaude"
+                  data-label="コマンド2行をコピーする" data-note="ターミナルに貼って実行してください">コマンド2行をコピーする</button>
+          <p class="caption" style="margin-top:var(--sp-sm);text-align:center" id="noteClaude">どのフォルダの Claude Code からも使えるようになります</p>
+        </div>
+        <div class="lp-copy">
+          <p class="body-sm" style="margin-bottom:var(--sp-sm)"><strong>B. Codex の人</strong></p>
+          <pre class="lp-pre lp-pre-open" id="codexBox">npx skills add typesafe-ai/skills --skill typesafe-ai -a codex -y</pre>
+          <button class="lp-btn-copy" type="button" data-copy="codexBox" data-note-id="noteCodex"
+                  data-label="コマンド1行をコピーする" data-note="使いたいプロジェクトのフォルダで実行してください">コマンド1行をコピーする</button>
+          <p class="caption" style="margin-top:var(--sp-sm);text-align:center" id="noteCodex">使いたいフォルダで実行します。全部のフォルダで使うなら <span class="mono">-g</span> を足します</p>
+        </div>
+      </div>
+      <p class="body-sm muted">入れたあとは、Claude Code / Codex を<strong>新しく開き直してください</strong>。開いたままだとスキルが見えません。</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="stack-xl">
+      <div class="stack-sm" style="max-width:760px">
+        <p class="lp-num">STEP 04</p>
+        <h2 class="display-md">最初の1件を通す</h2>
+        <p class="body muted">下の頼み文を貼って送るだけです。問い合わせ3件の<strong>「担当・緊急度・クレームかどうか」が表で返ってきたら成功</strong>。問い合わせの文は、自分の仕事のものに差し替えて大丈夫です（個人情報は入れないでください）。</p>
+      </div>
+      <div class="lp-copy">
+        <button class="lp-btn-copy" type="button" data-copy="promptBox" data-note-id="notePrompt"
+                data-label="頼み文をコピーする" data-note="Claude Code か Codex に貼り付けて送ってください">頼み文をコピーする</button>
+        <p class="caption" style="margin-top:var(--sp-sm);text-align:center" id="notePrompt">キーの値はAIに見せない書き方になっています</p>
+        <button class="lp-toggle" type="button" aria-expanded="false" data-peek="promptBox">中身を見る ▾</button>
+        <pre class="lp-pre" id="promptBox" hidden>Jev（TypeSafe AI の判定モデル）を、Vercel AI Gateway 経由で試したいです。
+
+前提
+- APIキーは環境変数 AI_GATEWAY_API_KEY に設定済みです。キーの値を表示したり、ファイルに書き込んだりしないでください
+- 呼び出しは AI SDK（ai パッケージ 7.0.105 以降）の experimental_evaluate、モデルは typesafe-ai/jev
+- 先に typesafe-ai スキルと公式ドキュメント（docs.typesafe.ai）を読んでから書いてください
+
+やってほしいこと
+1. このフォルダに jev-test という作業フォルダを作り、必要なパッケージを入れる
+2. 下の問い合わせ3件それぞれについて、次の3つを判定するスクリプトを書いて実行する
+   - 担当（注文・配送／返品・返金／その他）
+   - 緊急度（低・中・高）
+   - クレームかどうか（はい／いいえ）
+3. 結果を表で見せる。自信の数字（confidence）が低いものには「人が確認」と付ける
+4. 1件あたりにかかった時間も出す
+
+問い合わせ
+- 「昨日届くはずの荷物がまだ来ません。明日の朝に使うので今日中に連絡ください」
+- 「領収書の宛名を変えてもらうことはできますか？」
+- 「3回問い合わせたのに返事がない。もう返金してほしい」</pre>
+      </div>
+      <p class="body-sm muted">うまくいったら、次はこう頼めます。「この判定、Jev でやって」。</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="stack-xl">
+      <div class="stack-sm" style="max-width:760px">
+        <h2 class="display-md">つまずいたとき</h2>
+      </div>
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table class="table">
+            <thead>
+              <tr><th>症状</th><th>原因</th><th>対処</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="wrap">認証エラー（401）</td><td class="wrap">キーが読めていない</td><td class="wrap">キーを設定したのと<strong>同じターミナル</strong>で起動し直す</td></tr>
+              <tr><td class="wrap">429 が返る</td><td class="wrap">無料枠の回数制限</td><td class="wrap">少し待ってやり直す。続くなら AI Gateway のクレジットを足す</td></tr>
+              <tr><td class="wrap">モデルが見つからない</td><td class="wrap">AI SDK が古い</td><td class="wrap"><span class="mono">ai</span> パッケージを 7.0.105 以降に上げる</td></tr>
+              <tr><td class="wrap">スキルが出てこない</td><td class="wrap">入れる前から開いていた</td><td class="wrap">Claude Code / Codex を新しく開き直す</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="stack-xl">
+      <div class="stack-sm" style="max-width:760px">
+        <h2 class="display-md">知っておいてほしいこと</h2>
+      </div>
+      <div class="grid-3">
+        <article class="panel stack-sm">
+          <h3 class="card-title">料金は使った分だけ</h3>
+          <p class="body-sm muted">Vercel にかかります。心配なら AI Gateway の <span class="mono">Budgets</span> で上限を決めておけます。</p>
+        </article>
+        <article class="panel stack-sm">
+          <h3 class="card-title">人に回すのは、自分で組む</h3>
+          <p class="body-sm muted">答えと一緒に<strong>自信の数字</strong>が返ってきます。低いものだけ人が見る、と決めて組みます。自動では起きません。</p>
+        </article>
+        <article class="panel stack-sm">
+          <h3 class="card-title">数字の出どころ</h3>
+          <p class="body-sm muted">「8秒が0.1秒」「最大400分の1」は開発元の数字です。速度のデモは<strong>開発元に有利な条件</strong>だと、公式自身が書いています。</p>
+        </article>
+      </div>
+      <p class="body-sm muted">Jev はオープンソースではなく、API でだけ使えます。</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="stack-lg" style="max-width:760px">
+      <h2 class="headline">公式の情報</h2>
+      <div class="row">
+        <a class="btn btn-secondary" href="https://docs.typesafe.ai">公式ドキュメント</a>
+        <a class="btn btn-secondary" href="https://github.com/typesafe-ai/skills">公式スキル（GitHub）</a>
+        <a class="btn btn-secondary" href="https://github.com/sankaku-tech/jev-kit">この手順書のGitHub</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="container lp-foot">
+  <div class="stack-sm" style="max-width:760px">
+    <p class="body-sm muted">これは個人がまとめた非公式の手順書です。Jev は TypeSafe AI のサービスで、ここで配っているのは手順と頼み文だけです。画面や料金は変わることがあるので、うまくいかないときは公式の情報を優先してください。APIキーは人に見せず、AIのチャットにも貼らないでください。</p>
+    <p class="caption">MIT License · 自由に使って、自由に配ってもらって大丈夫です</p>
+  </div>
+</footer>
+
+<script>
+/* コピー。navigator.clipboard は https か localhost でしか動かないので、
+   落ちたときは選択+execCommand に降りる（古いブラウザ・file:// 対策）。 */
+(function () {
+  function fallback(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.lp-btn-copy[data-copy]'), function (btn) {
+    var box = document.getElementById(btn.getAttribute('data-copy'));
+    var note = document.getElementById(btn.getAttribute('data-note-id'));
+    if (!box || !note) return;
+    var restore = note.innerHTML;
+
+    function done(ok) {
+      if (ok) {
+        btn.textContent = 'コピーしました';
+        btn.classList.add('is-done');
+        note.textContent = btn.getAttribute('data-note');
+        setTimeout(function () {
+          btn.textContent = btn.getAttribute('data-label');
+          btn.classList.remove('is-done');
+          note.innerHTML = restore;
+        }, 4000);
+      } else {
+        // コピーできない環境では、せめて選択できる状態にして見せる
+        box.hidden = false;
+        note.textContent = 'コピーできませんでした。枠の中の文章を選択してコピーしてください';
+      }
+    }
+
+    btn.addEventListener('click', function () {
+      var text = box.textContent;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { done(true); },
+                                                function () { done(fallback(text)); });
+      } else {
+        done(fallback(text));
+      }
+    });
+  });
+
+  // 「中身を見る」の開閉
+  Array.prototype.forEach.call(document.querySelectorAll('[data-peek]'), function (peek) {
+    var box = document.getElementById(peek.getAttribute('data-peek'));
+    peek.addEventListener('click', function () {
+      var open = box.hidden;
+      box.hidden = !open;
+      peek.setAttribute('aria-expanded', String(open));
+      peek.textContent = open ? '中身を隠す ▴' : '中身を見る ▾';
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
