@@ -1,23 +1,29 @@
 # 最初の1件を通すための頼み文
 
-Claude Code か Codex に、下の枠の中をそのまま貼って送ってください。
+Claude Code か Codex に、下の枠の中を貼って送ってください。送る前に2行目の【公式】を、Vercel のキーなら【Vercel】に書き換えます。
 途中でAIが止まって「キーを貼ってください」と言うので、開いたファイルにキーを貼って保存し、「貼った」と返します。
 問い合わせの文は、自分の仕事のものに差し替えて大丈夫です（個人情報は入れないでください）。
 
 ```
-Jev（TypeSafe AI の判定モデル）を、Vercel AI Gateway 経由で試したいです。
+Jev（TypeSafe AI の判定モデル）を試したいです。
+私のキーは【公式】のキーです。
+
+キーの種類ごとの使い方
+- 公式（console.typesafe.ai で作ったキー）: 変数名は TYPESAFE_API_KEY。呼び出しは公式 SDK（@typesafe-ai/sdk）
+- Vercel（AI Gateway で作ったキー）: 変数名は AI_GATEWAY_API_KEY。呼び出しは AI SDK（ai パッケージ 7.0.105 以降）の experimental_evaluate、モデルは typesafe-ai/jev
+
 私はターミナルの操作に慣れていないので、APIキーは .env.local に貼るやり方で進めてください。
 
 進め方
 1. このフォルダに jev-test という作業フォルダを作る
-2. その中に .env.local を作り、中身は「AI_GATEWAY_API_KEY=」の1行だけにする（値は空）
+2. その中に .env.local を作り、中身は上の変数名で「変数名=」の1行だけにする（値は空）
 3. .env.local が git の対象外になっているか確認し、なっていなければ .gitignore に足す
 4. .env.local をエディタで開いて、ここで止まる。私に「= の後ろにキーを貼って保存したら『貼った』と送ってください」と伝える
 5. 私が「貼った」と送ったら、続きを進める
 
 守ってほしいこと
 - キーの値を読まない、表示しない、ほかのファイルに書かない。実行は node --env-file=.env.local のように、ファイルから読み込ませる形にする
-- 呼び出しは AI SDK（ai パッケージ 7.0.105 以降）の experimental_evaluate、モデルは typesafe-ai/jev
+- 呼び出し方は、上の「キーの種類ごとの使い方」に合わせる
 - 先に typesafe-ai スキルと公式ドキュメント（docs.typesafe.ai）を読んでから書く
 
 やってほしいこと
